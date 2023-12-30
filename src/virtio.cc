@@ -105,8 +105,6 @@ typedef int VIRTIODeviceRecvFunc(VIRTIODevice *s1, int queue_idx,
 typedef uint8_t *VIRTIOGetRAMPtrFunc(VIRTIODevice *s, virtio_phys_addr_t paddr, BOOL is_rw);
 
 struct VIRTIODevice {
-    PhysMemoryMap *mem_map;
-    PhysMemoryRange *mem_range;
     /* MMIO only */
     IRQSpike* irq;
     VIRTIOGetRAMPtrFunc *get_ram_ptr;
@@ -281,7 +279,8 @@ static void virtio_reset(VIRTIODevice *s)
 
 static uint8_t *virtio_mmio_get_ram_ptr(VIRTIODevice *s, virtio_phys_addr_t paddr, BOOL is_rw)
 {
-    return phys_mem_get_ram_ptr(s->mem_map, paddr, is_rw);
+    //TODO: implement method to get pointer in guest ram via sim_t;
+    return nullptr;
 }
 
 
@@ -293,12 +292,8 @@ static void virtio_init(VIRTIODevice *s, VIRTIOBusDef *bus,
 
     {
         /* MMIO case */
-        s->mem_map = bus->mem_map;
         s->irq = bus->irq;
         // TODO: Register virtio_mmio_read, virtio_mmio_write as read/write function.
-        s->mem_range = cpu_register_device(s->mem_map, bus->addr, VIRTIO_PAGE_SIZE,
-                                           s, nullptr, nullptr,
-                                           DEVIO_SIZE8 | DEVIO_SIZE16 | DEVIO_SIZE32);
         s->get_ram_ptr = virtio_mmio_get_ram_ptr;
     }
 
@@ -1033,12 +1028,8 @@ virtioblk_t::virtioblk_t(
 
     s = (VIRTIODevice*)mallocz(sizeof(*s));
 
-    s->mem_map = phys_mem_map_init();
-    s->mem_map->opaque = s;
-    s->mem_map->flush_tlb_write_range ;
 
     memset(vbus, 0, sizeof(*vbus));
-    vbus->mem_map = s->mem_map;
     vbus->addr = VIRTIO_BASE_ADDR;
     irq_num = VIRTIO_IRQ;
 

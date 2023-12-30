@@ -70,7 +70,6 @@ static inline void set_irq(IRQSpike* irq, int level) {
 
 typedef struct {
     /* MMIO only: */
-    PhysMemoryMap *mem_map;
     uint64_t addr;
     IRQSpike *irq;
 } VIRTIOBusDef;
