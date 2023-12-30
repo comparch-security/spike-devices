@@ -129,8 +129,8 @@ struct VIRTIODevice {
     uint8_t config_space[MAX_CONFIG_SPACE_SIZE];
 };
 
-static uint32_t virtio_mmio_read(void *opaque, uint32_t offset1, int size_log2);
-static void virtio_mmio_write(void *opaque, uint32_t offset,
+static uint32_t virtio_mmio_read(VIRTIODevice *opaque, uint32_t offset1, int size_log2);
+static void virtio_mmio_write(VIRTIODevice *opaque, uint32_t offset,
                               uint32_t val, int size_log2);
 
 static void virtio_reset(VIRTIODevice *s)
@@ -168,8 +168,9 @@ static void virtio_init(VIRTIODevice *s, VIRTIOBusDef *bus,
         /* MMIO case */
         s->mem_map = bus->mem_map;
         s->irq = bus->irq;
+        // TODO: Register virtio_mmio_read, virtio_mmio_write as read/write function.
         s->mem_range = cpu_register_device(s->mem_map, bus->addr, VIRTIO_PAGE_SIZE,
-                                           s, virtio_mmio_read, virtio_mmio_write,
+                                           s, nullptr, nullptr,
                                            DEVIO_SIZE8 | DEVIO_SIZE16 | DEVIO_SIZE32);
         s->get_ram_ptr = virtio_mmio_get_ram_ptr;
     }
@@ -489,7 +490,7 @@ static void virtio_config_write(VIRTIODevice *s, uint32_t offset,
     }
 }
 
-static uint32_t virtio_mmio_read(void *opaque, uint32_t offset, int size_log2)
+static uint32_t virtio_mmio_read(VIRTIODevice *opaque, uint32_t offset, int size_log2)
 {
     VIRTIODevice *s = (VIRTIODevice*)opaque;
     uint32_t val;
@@ -602,7 +603,7 @@ static void set_low32(virtio_phys_addr_t *paddr, uint32_t val)
 }
 #endif
 
-static void virtio_mmio_write(void *opaque, uint32_t offset,
+static void virtio_mmio_write(VIRTIODevice *opaque, uint32_t offset,
                               uint32_t val, int size_log2)
 {
     VIRTIODevice *s = (VIRTIODevice*)opaque;
@@ -760,9 +761,9 @@ static void virtio_block_req_end(VIRTIODevice *s, int ret)
     }
 }
 
-static void virtio_block_req_cb(void *opaque, int ret)
+static void virtio_block_req_cb(VIRTIODevice *opaque, int ret)
 {
-    VIRTIODevice *s = (VIRTIODevice*)opaque;
+    VIRTIODevice *s = opaque;
     VIRTIOBlockDevice *s1 = (VIRTIOBlockDevice *)s;
 
     virtio_block_req_end(s, ret);

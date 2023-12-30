@@ -84,7 +84,7 @@ void virtio_set_debug(VIRTIODevice *s, int debug_flags);
 
 /* block device */
 
-typedef void BlockDeviceCompletionFunc(void *opaque, int ret);
+typedef void BlockDeviceCompletionFunc(VIRTIODevice *opaque, int ret);
 
 struct BlockDevice ;
 
