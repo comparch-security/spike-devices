@@ -87,16 +87,31 @@ void virtio_set_debug(VIRTIODevice *s, int debug_flags);
 typedef void BlockDeviceCompletionFunc(VIRTIODevice *opaque, int ret);
 
 struct BlockDevice ;
+struct BlockDeviceFile;
+
+typedef enum {
+    BF_MODE_RO,
+    BF_MODE_RW,
+    BF_MODE_SNAPSHOT,
+} BlockDeviceModeEnum;
+
+typedef struct BlockDeviceFile {
+    FILE *f;
+    int64_t nb_sectors;
+    BlockDeviceModeEnum mode;
+    uint8_t **sector_table;
+} BlockDeviceFile;
+
 
 struct BlockDevice {
     int64_t (*get_sector_count)(BlockDevice *bs);
     int (*read_async)(BlockDevice *bs,
                       uint64_t sector_num, uint8_t *buf, int n,
-                      BlockDeviceCompletionFunc *cb, void *opaque);
+                      BlockDeviceCompletionFunc *cb, VIRTIODevice *opaque);
     int (*write_async)(BlockDevice *bs,
                        uint64_t sector_num, const uint8_t *buf, int n,
-                       BlockDeviceCompletionFunc *cb, void *opaque);
-    void *opaque;
+                       BlockDeviceCompletionFunc *cb, VIRTIODevice *opaque);
+    BlockDeviceFile *opaque;
 };
 
 VIRTIODevice *virtio_block_init(VIRTIOBusDef *bus, BlockDevice *bs);
