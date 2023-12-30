@@ -108,7 +108,7 @@ struct VIRTIODevice {
     PhysMemoryMap *mem_map;
     PhysMemoryRange *mem_range;
     /* MMIO only */
-    IRQSignal *irq;
+    IRQSpike* irq;
     VIRTIOGetRAMPtrFunc *get_ram_ptr;
     int debug;
 

@@ -54,11 +54,25 @@ typedef uint64_t virtio_phys_addr_t;
 typedef uint32_t virtio_phys_addr_t;
 #endif
 
+class IRQSpike {
+  abstract_interrupt_controller_t* intctrl;
+  uint32_t interrupt_id;
+public:
+  IRQSpike(abstract_interrupt_controller_t* intctrl_, uint32_t irq_num)
+    :intctrl(intctrl_),interrupt_id(irq_num){}
+  void set(int level) {intctrl->set_interrupt_level(interrupt_id, level);}
+};
+
+// Override default set_irq(IRQSignal*,int) static function
+static inline void set_irq(IRQSpike* irq, int level) {
+  irq->set(level);
+}
+
 typedef struct {
     /* MMIO only: */
     PhysMemoryMap *mem_map;
     uint64_t addr;
-    IRQSignal *irq;
+    IRQSpike *irq;
 } VIRTIOBusDef;
 
 struct VIRTIODevice; 
@@ -105,6 +119,7 @@ private:
 
 private:
   VIRTIODevice* s;
+  IRQSpike* irq;
 };
 
 

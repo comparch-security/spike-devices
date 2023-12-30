@@ -142,9 +142,4 @@ typedef struct {
 
 void irq_init(IRQSignal *irq, SetIRQFunc *set_irq, void *opaque, int irq_num);
 
-static inline void set_irq(IRQSignal *irq, int level)
-{
-    irq->set_irq(irq->opaque, irq->irq_num, level);
-}
-
 #endif /* IOMEM_H */
