@@ -701,13 +701,13 @@ typedef struct {
     int desc_idx;
 } BlockRequest;
 
-typedef struct VIRTIOBlockDevice {
-    VIRTIODevice common;
+struct VIRTIOBlockDevice : public VIRTIODevice {
+public:
     BlockDevice *bs;
 
     BOOL req_in_progress;
     BlockRequest req; /* request in progress */
-} VIRTIOBlockDevice;
+} ;
 
 typedef struct {
     uint32_t type;
@@ -833,13 +833,13 @@ VIRTIODevice *virtio_block_init(VIRTIOBusDef *bus, BlockDevice *bs)
     uint64_t nb_sectors;
 
     s = (VIRTIOBlockDevice *)mallocz(sizeof(*s));
-    virtio_init(&s->common, bus,
+    virtio_init(s, bus,
                 2, 8, virtio_block_recv_request);
     s->bs = bs;
     
     nb_sectors = bs->get_sector_count(bs);
-    put_le32(s->common.config_space, nb_sectors);
-    put_le32(s->common.config_space + 4, nb_sectors >> 32);
+    put_le32(s->config_space, nb_sectors);
+    put_le32(s->config_space + 4, nb_sectors >> 32);
 
     return (VIRTIODevice *)s;
 }
