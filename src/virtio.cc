@@ -286,11 +286,12 @@ static uint8_t *virtio_mmio_get_ram_ptr(VIRTIODevice *s, virtio_phys_addr_t padd
 
 static void virtio_init(VIRTIODevice *s, VIRTIOBusDef *bus,
                         uint32_t device_id, int config_space_size,
-                        VIRTIODeviceRecvFunc *device_recv)
+                        VIRTIODeviceRecvFunc *device_recv, const simif_t* sim)
 {
     memset(s, 0, sizeof(*s));
 
     {
+        s->sim = sim;
         /* MMIO case */
         s->irq = bus->irq;
         // TODO: Register virtio_mmio_read, virtio_mmio_write as read/write function.
@@ -950,14 +951,14 @@ static int virtio_block_recv_request(VIRTIODevice *s, int queue_idx,
     return 0;
 }
 
-VIRTIODevice *virtio_block_init(VIRTIOBusDef *bus, BlockDevice *bs)
+VIRTIODevice *virtio_block_init(VIRTIOBusDef *bus, BlockDevice *bs, const simif_t* sim)
 {
     VIRTIOBlockDevice *s;
     uint64_t nb_sectors;
 
     s = (VIRTIOBlockDevice *)mallocz(sizeof(*s));
     virtio_init(s, bus,
-                2, 8, virtio_block_recv_request);
+                2, 8, virtio_block_recv_request, sim);
     s->bs = bs;
     
     nb_sectors = bs->get_sector_count(bs);
@@ -1026,18 +1027,17 @@ virtioblk_t::virtioblk_t(
 
     max_xlen=64;
 
-    s = (VIRTIODevice*)mallocz(sizeof(*s));
-
-
     memset(vbus, 0, sizeof(*vbus));
     vbus->addr = VIRTIO_BASE_ADDR;
     irq_num = VIRTIO_IRQ;
+    irq = new IRQSpike(intctrl, irq_num);
 
     // only one virtio block device
     //REQUIRE: register irq_num as plic_irq number
     // vbus->irq = &s->plci_irq[irq_num];
+    vbus->irq = irq;
 
-    blk_dev = virtio_block_init(vbus, bs);
+    blk_dev = virtio_block_init(vbus, bs, sim);
     vbus->addr += VIRTIO_SIZE;
 
   }
@@ -1045,7 +1045,7 @@ virtioblk_t::virtioblk_t(
 }
 
 virtioblk_t::~virtioblk_t() {
-    
+    if (irq) delete irq;
 }
 
 std::string virtioblk_generate_dts(const sim_t* sim) {

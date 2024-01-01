@@ -132,7 +132,7 @@ private:
   uint32_t interrupt_id;
 
 private:
-  VIRTIODevice* s;
+  VIRTIODevice* blk_dev;
   IRQSpike* irq;
 };
 
