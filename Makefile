@@ -12,7 +12,7 @@ UTIL_OBJS := iomem.o cutils.o
 CFLAGS=-O2 -Wall -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -MMD
 CFLAGS+=-D_GNU_SOURCE 
 
-default: libspikedevices.so
+default: libvitioblockdevice.so
 
 iomem.o : iomem.c iomem.h
 	gcc $(CFLAGS) -c -o $@ $^
@@ -20,12 +20,16 @@ iomem.o : iomem.c iomem.h
 cutils.o : cutils.c cutils.h
 	gcc $(CFLAGS) -c -o $@ $^
 
+libvitioblockdevice.so : virtio.cc vitio.h $(UTIL_OBJS)
+	g++ -L $(RISCV)/lib -Wl,-rpath,$(RISCV)/lib -shared -o $@ -std=c++17 -I $(RISCV)/include -isystem $(RISCV)/include/fdt -fPIC $< $(UTIL_OBJS)
+
 libspikedevices.so: $(SRCS)
 	g++ -L $(RISCV)/lib -Wl,-rpath,$(RISCV)/lib -shared -o $@ -std=c++17 -I $(RISCV)/include -isystem $(RISCV)/include/fdt -fPIC $^
 
 .PHONY: install
-install: libspikedevices.so
+install: libspikedevices.so libvitioblockdevice.so
 	cp libspikedevices.so $(RISCV)/lib
+	cp libvitioblockdevice.so $(RISCV)/lib
 
 clean:
 	rm -rf *.o *.so
