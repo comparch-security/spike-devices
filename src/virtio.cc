@@ -1163,7 +1163,19 @@ bool virtioblk_t::store(reg_t addr, size_t len, const uint8_t *bytes) {
 }
 
 std::string virtioblk_generate_dts(const sim_t* sim) {
-  return std::string();
+  std::stringstream s;
+  s << std::hex 
+    << "    virtioblk: virtio@" << VIRTIO_BASE_ADDR << " {\n"
+    << "      compatible = \"virtio,mmio\";\n"
+       "      interrupt-parent = <&PLIC>;\n"
+       "      interrupts = <" << std::dec << VIRTIO_IRQ;
+    reg_t virtioblkbs = VIRTIO_BASE_ADDR;
+    reg_t virtioblksz = VIRTIO_SIZE;
+  s << std::hex << ">;\n"
+       "      reg = <0x" << (virtioblkbs >> 32) << " 0x" << (virtioblkbs & (uint32_t)-1) <<
+                   " 0x" << (virtioblksz >> 32) << " 0x" << (virtioblksz & (uint32_t)-1) << ">;\n"
+       "    };\n";
+    return s.str();
 }
 
 virtioblk_t* virtioblk_parse_from_fdt(
