@@ -87,6 +87,8 @@ typedef struct {
 #define VRING_DESC_F_WRITE	2
 #define VRING_DESC_F_INDIRECT	4
 
+// #define OPT_MEMCPY_RAM
+
 typedef struct {
     uint64_t addr;
     uint32_t len;
@@ -105,9 +107,9 @@ typedef int VIRTIODeviceRecvFunc(VIRTIODevice *s1, int queue_idx,
 typedef uint8_t *VIRTIOGetRAMPtrFunc(VIRTIODevice *s, virtio_phys_addr_t paddr, BOOL is_rw);
 
 struct VIRTIODevice {
+    const simif_t* sim;
     /* MMIO only */
     IRQSpike* irq;
-    VIRTIOGetRAMPtrFunc *get_ram_ptr;
     int debug;
 
     uint32_t int_status;
@@ -277,12 +279,6 @@ static void virtio_reset(VIRTIODevice *s)
     }
 }
 
-static uint8_t *virtio_mmio_get_ram_ptr(VIRTIODevice *s, virtio_phys_addr_t paddr, BOOL is_rw)
-{
-    //TODO: implement method to get pointer in guest ram via sim_t;
-    return nullptr;
-}
-
 
 static void virtio_init(VIRTIODevice *s, VIRTIOBusDef *bus,
                         uint32_t device_id, int config_space_size,
@@ -295,7 +291,6 @@ static void virtio_init(VIRTIODevice *s, VIRTIOBusDef *bus,
         /* MMIO case */
         s->irq = bus->irq;
         // TODO: Register virtio_mmio_read, virtio_mmio_write as read/write function.
-        s->get_ram_ptr = virtio_mmio_get_ram_ptr;
     }
 
     s->device_id = device_id;
@@ -307,37 +302,102 @@ static void virtio_init(VIRTIODevice *s, VIRTIOBusDef *bus,
 
 static uint16_t virtio_read16(VIRTIODevice *s, virtio_phys_addr_t addr)
 {
-    uint8_t *ptr;
-    if (addr & 1)
-        return 0; /* unaligned access are not supported */
-    ptr = s->get_ram_ptr(s, addr, FALSE);
-    if (!ptr)
-        return 0;
-    return *(uint16_t *)ptr;
+    mmu_t* simdram = s->sim->debug_mmu;
+    return simdram->load<uint16_t>(addr);
 }
 
 static void virtio_write16(VIRTIODevice *s, virtio_phys_addr_t addr,
                            uint16_t val)
 {
-    uint8_t *ptr;
-    if (addr & 1)
-        return; /* unaligned access are not supported */
-    ptr = s->get_ram_ptr(s, addr, TRUE);
-    if (!ptr)
-        return;
-    *(uint16_t *)ptr = val;
+    mmu_t* simdram = s->sim->debug_mmu;
+    simdram->store<uint16_t>(val, addr);
 }
 
 static void virtio_write32(VIRTIODevice *s, virtio_phys_addr_t addr,
                            uint32_t val)
 {
-    uint8_t *ptr;
-    if (addr & 3)
-        return; /* unaligned access are not supported */
-    ptr = s->get_ram_ptr(s, addr, TRUE);
-    if (!ptr)
-        return;
-    *(uint32_t *)ptr = val;
+    mmu_t* simdram = s->sim->debug_mmu;
+    simdram->store<uint32_t>(val, addr);
+}
+
+static int memcpy_from_ram_intrapage(VIRTIODevice *s, uint8_t *buf,
+                                  virtio_phys_addr_t addr, int count)
+{
+    mmu_t* simdram = s->sim->debug_mmu;
+    int l = 0;
+    while (count > 0) {
+#ifdef OPT_MEMCPY_RAM
+        if (addr & 1 || count < 2) {
+            *(buf+l) = simdram->load<uint8_t>(addr);
+            count -= 1;
+            l += 1;
+            addr += 1;
+        }
+        else if (addr & 2 || count < 4) {
+            *(uint16_t*)(buf+l) = simdram->load<uint16_t>(addr);
+            count -= 2;
+            l += 2;
+            addr += 2;
+        }
+        else if (addr & 4 || count < 8) {
+            *(uint32_t*)(buf+l) = simdram->load<uint32_t>(addr);
+            count -= 4;
+            l += 4;
+            addr += 4;
+        }
+        else {// addr is 8byte aligned
+            *(uint64_t*)(buf+l) = simdram->load<uint64_t>(addr);
+            count -= 8;
+            l += 8;
+            addr += 8;
+        }
+#else 
+        buf[l] = simdram->load<uint8_t>(addr+l);
+        l++;
+        count--;
+#endif
+    }
+    return l;
+}
+
+static int memcpy_to_ram_intrapage(VIRTIODevice *s, virtio_phys_addr_t addr,
+                                   const uint8_t *buf, int count)
+{
+    mmu_t* simdram = s->sim->debug_mmu;
+    int l = 0;
+    while (count > 0) {
+#ifdef OPT_MEMCPY_RAM
+        if (addr & 1 || count < 2) {
+            simdram->store<uint8_t>(addr, *(uint8_t*)(buf+l));
+            count -= 1;
+            l += 1;
+            addr += 1;
+        }
+        else if (addr & 2 || count < 4) {
+            simdram->store<uint16_t>(addr, *(uint16_t*)(buf+l));
+            count -= 2;
+            l += 2;
+            addr += 2;
+        }
+        else if (addr & 4 || count < 8) {
+            simdram->store<uint32_t>(addr, *(uint32_t*)(buf+l));
+            count -= 4;
+            l += 4;
+            addr += 4;
+        }
+        else {// addr is 8byte aligned
+            simdram->store<uint64_t>(addr, *(uint64_t*)(buf+l));
+            count -= 8;
+            l += 8;
+            addr += 8;
+        }
+#else 
+        simdram->store<uint8_t>(addr+l, buf[l]);
+        l++;
+        count--;
+#endif
+    }
+    return l;
 }
 
 static int virtio_memcpy_from_ram(VIRTIODevice *s, uint8_t *buf,
@@ -348,10 +408,7 @@ static int virtio_memcpy_from_ram(VIRTIODevice *s, uint8_t *buf,
 
     while (count > 0) {
         l = min_int(count, VIRTIO_PAGE_SIZE - (addr & (VIRTIO_PAGE_SIZE - 1)));
-        ptr = s->get_ram_ptr(s, addr, FALSE);
-        if (!ptr)
-            return -1;
-        memcpy(buf, ptr, l);
+        memcpy_from_ram_intrapage(s, buf, addr, l);
         addr += l;
         buf += l;
         count -= l;
@@ -367,10 +424,7 @@ static int virtio_memcpy_to_ram(VIRTIODevice *s, virtio_phys_addr_t addr,
 
     while (count > 0) {
         l = min_int(count, VIRTIO_PAGE_SIZE - (addr & (VIRTIO_PAGE_SIZE - 1)));
-        ptr = s->get_ram_ptr(s, addr, TRUE);
-        if (!ptr)
-            return -1;
-        memcpy(ptr, buf, l);
+        memcpy_to_ram_intrapage(s, addr, buf, l);
         addr += l;
         buf += l;
         count -= l;
