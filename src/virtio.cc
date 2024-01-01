@@ -28,6 +28,7 @@
 #include <assert.h>
 #include <stdarg.h>
 #include "virtio.h"
+#include "cutils.h"
 
 // #define DEBUG_VIRTIO
 

@@ -7,7 +7,7 @@ endif
 PREFIX ?= $RISCV/
 SRC_DIR := src
 SRCS= $(SRC_DIR)/sifive_uart.cc $(SRC_DIR)/iceblk.cc
-UTIL_OBJS := $(SRC_DIR)/iomem.o $(SRC_DIR)/cutils.o 
+UTIL_OBJS := $(SRC_DIR)/cutils.o 
 
 CFLAGS=-O2 -Wall -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -MMD
 CFLAGS+=-D_GNU_SOURCE -fPIC 
