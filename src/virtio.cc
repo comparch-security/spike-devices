@@ -29,7 +29,7 @@
 #include <stdarg.h>
 #include "virtio.h"
 
-//#define DEBUG_VIRTIO
+// #define DEBUG_VIRTIO
 
 
 /* MMIO addresses - from the Linux kernel */
@@ -172,6 +172,7 @@ static int bf_read_async(BlockDevice *bs,
         fread(buf, 1, n * SECTOR_SIZE, bf->f);
     }
     /* synchronous read */
+        // printf("bf_read_async successfully finished.\n");
     return 0;
 }
 
@@ -447,6 +448,16 @@ static int memcpy_to_from_queue(VIRTIODevice *s, uint8_t *buf,
     VIRTIODesc desc;
     int l, f_write_flag;
 
+#ifdef DEBUG_VIRTIO
+    if (to_queue) {
+        printf("Reading from buf %p, len = %u, to queue qidx = %d, desc_idx = %d\n",
+            buf, count, queue_idx, desc_idx);
+    }
+    else {
+        printf("Reading from queue qidx = %d, desc_idx = %d, len = %u, to buf %p\n",
+            queue_idx, desc_idx, count, buf);
+    }
+#endif
     if (count == 0)
         return 0;
 
@@ -501,6 +512,9 @@ static int memcpy_to_from_queue(VIRTIODevice *s, uint8_t *buf,
             offset = 0;
         }
     }
+#ifdef DEBUG_VIRTIO
+    printf("Reading successfully finished.\n");
+#endif 
     return 0;
 }
 
@@ -527,15 +541,20 @@ static void virtio_consume_desc(VIRTIODevice *s,
     QueueState *qs = &s->queue[queue_idx];
     virtio_phys_addr_t addr;
     uint32_t index;
-
+#ifdef DEBUG_VIRTIO
+    printf("Consuming virtio desc qidx = %d, desc_idx = %d, desc_len = %d\n",
+        queue_idx, desc_idx, desc_len);
+#endif
     addr = qs->used_addr + 2;
     index = virtio_read16(s, addr);
     virtio_write16(s, addr, index + 1);
-
     addr = qs->used_addr + 4 + (index & (qs->num - 1)) * 8;
     virtio_write32(s, addr, desc_idx);
     virtio_write32(s, addr + 4, desc_len);
-
+#ifdef DEBUG_VIRTIO
+    printf("Consumed virtio desc qidx = %d, desc_idx = %d, desc_len = %d\n",
+        queue_idx, desc_idx, desc_len);
+#endif
     s->int_status |= 1;
     set_irq(s->irq, 1);
 }
@@ -593,7 +612,7 @@ static void queue_notify(VIRTIODevice *s, int queue_idx)
                                  (qs->last_avail_idx & (qs->num - 1)) * 2);
         if (!get_desc_rw_size(s, &read_size, &write_size, queue_idx, desc_idx)) {
 #ifdef DEBUG_VIRTIO
-            if (s->debug & VIRTIO_DEBUG_IO) {
+            {
                 printf("queue_notify: idx=%d read_size=%d write_size=%d\n",
                        queue_idx, read_size, write_size);
             }
@@ -603,6 +622,10 @@ static void queue_notify(VIRTIODevice *s, int queue_idx)
                 break;
         }
         qs->last_avail_idx++;
+#ifdef DEBUG_VIRTIO
+        printf("avail_idx = %d, last_avail_idx = %d.\n",
+            avail_idx, qs->last_avail_idx);
+#endif
     }
 }
 
@@ -754,7 +777,7 @@ static uint32_t virtio_mmio_read(VIRTIODevice *opaque, uint32_t offset, int size
         val = 0;
     }
 #ifdef DEBUG_VIRTIO
-    if (s->debug & VIRTIO_DEBUG_IO) {
+    {
         printf("virto_mmio_read: offset=0x%x val=0x%x size=%d\n", 
                offset, val, 1 << size_log2);
     }
@@ -785,7 +808,7 @@ static void virtio_mmio_write(VIRTIODevice *opaque, uint32_t offset,
     VIRTIODevice *s = (VIRTIODevice*)opaque;
     
 #ifdef DEBUG_VIRTIO
-    if (s->debug & VIRTIO_DEBUG_IO) {
+    {
         printf("virto_mmio_write: offset=0x%x val=0x%x size=%d\n",
                offset, val, 1 << size_log2);
     }
@@ -843,7 +866,15 @@ static void virtio_mmio_write(VIRTIODevice *opaque, uint32_t offset,
             break;
         case VIRTIO_MMIO_QUEUE_NOTIFY:
             if (val < MAX_QUEUE)
+#ifdef DEBUG_VIRTIO
+            {
+        printf("queue_notify on qidx %d invoked by MMIO write begin.\n", val);
+#endif
                 queue_notify(s, val);
+#ifdef DEBUG_VIRTIO
+        printf("queue_notify on qidx %d invoked by MMIO write finished.\n", val);
+            }
+#endif
             break;
         case VIRTIO_MMIO_INTERRUPT_ACK:
             s->int_status &= ~val;
@@ -910,7 +941,9 @@ static void virtio_block_req_end(VIRTIODevice *s, int ret)
     int queue_idx = s1->req.queue_idx;
     int desc_idx = s1->req.desc_idx;
     uint8_t *buf, buf1[1];
-
+#ifdef DEBUG_VIRTIO
+    printf("Entering req end func... ret = %d, req type =in?%d\n", ret, s1->req.type);
+#endif 
     switch(s1->req.type) {
     case VIRTIO_BLK_T_IN:
         write_size = s1->req.write_size;
@@ -961,14 +994,28 @@ static int virtio_block_recv_request(VIRTIODevice *s, int queue_idx,
     uint8_t *buf;
     int len, ret;
 
+#ifdef DEBUG_VIRTIO
+        printf("Entering recv req function ... qidx = %d, desc_idx = %d, read_size = %d, write_size = %d\n",
+            queue_idx, desc_idx, read_size, write_size);
+#endif
+
     if (s1->req_in_progress)
+#ifdef DEBUG_VIRTIO
+    {
+        printf("Request in progress, exit recv req function.\n");
         return -1;
-    
+    }
+#else
+        return -1;
+#endif 
     if (memcpy_from_queue(s, &h, queue_idx, desc_idx, 0, sizeof(h)) < 0)
         return 0;
     s1->req.type = h.type;
     s1->req.queue_idx = queue_idx;
     s1->req.desc_idx = desc_idx;
+#ifdef DEBUG_VIRTIO
+    printf("req in?=%d\n",h.type);
+#endif
     switch(h.type) {
     case VIRTIO_BLK_T_IN:
         s1->req.buf = (uint8_t*)malloc(write_size);
@@ -1001,6 +1048,10 @@ static int virtio_block_recv_request(VIRTIODevice *s, int queue_idx,
     default:
         break;
     }
+#ifdef DEBUG_VIRTIO
+    printf("Exiting recv req function ... qidx = %d, desc_idx = %d, read_size = %d, write_size = %d\n",
+        queue_idx, desc_idx, read_size, write_size);
+#endif
     return 0;
 }
 
