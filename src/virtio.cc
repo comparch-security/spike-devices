@@ -1102,6 +1102,66 @@ virtioblk_t::~virtioblk_t() {
     if (irq) delete irq;
 }
 
+bool virtioblk_t::load(reg_t addr, size_t len, uint8_t *bytes) {
+    if (len > 8) return false;
+
+    if (len == 1) {
+        // virtio_mmio_read will not return correct value here.
+        read_little_endian_reg((uint8_t)0, 0, len, bytes);
+        return true;
+    }
+    else if (len == 2) {
+        // virtio_mmio_read will not return correct value here.
+        read_little_endian_reg((uint16_t)0, 0, len, bytes);
+        return true;
+    }
+    else if (len == 4) {
+        uint32_t val = virtio_mmio_read(blk_dev, addr, 2);
+        read_little_endian_reg(val, 0, len, bytes);
+    }
+    else if (len == 8) {
+        uint64_t low = virtio_mmio_read(blk_dev, addr, 2);
+        uint64_t high = virtio_mmio_read(blk_dev, addr+4, 2);
+        read_little_endian_reg(low | (high << 32), 0, len, bytes);
+    }
+    else {
+        return false;
+    }
+
+    return true;
+
+}
+
+bool virtioblk_t::store(reg_t addr, size_t len, const uint8_t *bytes) {
+    if (len > 8) return false;
+
+    if (len == 1) {
+        uint8_t val;
+        write_little_endian_reg((uint8_t*)&val, 0, len, bytes);
+        return true;
+    }
+    else if (len == 2) {
+        uint16_t val;
+        write_little_endian_reg((uint16_t*)&val, 0, len, bytes);
+        return true;
+    }
+    else if (len == 4) {
+        uint32_t val;
+        write_little_endian_reg(&val, 0, len, bytes);
+        virtio_mmio_write(blk_dev, addr, val, 2);
+    }
+    else if (len == 8) {
+        uint64_t val;
+        write_little_endian_reg(&val, 0, len, bytes);
+        virtio_mmio_write(blk_dev, addr, val & 0xffffffff, 2);
+        virtio_mmio_write(blk_dev, addr+4, (val >> 32) & 0xffffffff, 2);
+    }
+    else {
+        return false;   
+    }
+    return true;
+}
+
 std::string virtioblk_generate_dts(const sim_t* sim) {
   return std::string();
 }
@@ -1111,7 +1171,7 @@ virtioblk_t* virtioblk_parse_from_fdt(
     std::vector<std::string> sargs)
 {
   uint32_t blkdev_int_id;
-  if (fdt_parse_virtioblk(fdt, base, &blkdev_int_id, "ucbbar,blkdev") == 0) {
+  if (fdt_parse_virtioblk(fdt, base, &blkdev_int_id, "virtio,mmio") == 0) {
     abstract_interrupt_controller_t* intctrl = sim->get_intctrl();
     return new virtioblk_t(sim, intctrl, blkdev_int_id, sargs);
   } else {
