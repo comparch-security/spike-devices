@@ -1,1 +1,9 @@
 libspikedevices.so
+libvirtioblockdevice.so
+
+*.o
+*.d
+
+.vscode/
+compile_commands.json
+.cache/
