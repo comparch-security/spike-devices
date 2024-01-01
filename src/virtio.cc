@@ -1117,7 +1117,9 @@ virtioblk_t::virtioblk_t(
     }
   }
 
-
+  std::string fname;
+  BlockDeviceModeEnum block_device_mode = BF_MODE_RW;
+  
   auto it = argmap.find("img");
   if (it == argmap.end()) {
     // invalid block device.
@@ -1126,11 +1128,26 @@ virtioblk_t::virtioblk_t(
     exit(1);
   }
   else {
-    std::string fname = it->second;
+    fname = it->second;
+  }
+
+    it = argmap.find("mode");
+    if (it != argmap.end()) {
+        if (it->second == "ro") {
+            block_device_mode = BF_MODE_RO;
+        }
+        else if (it->second == "snapshot") {
+            block_device_mode = BF_MODE_SNAPSHOT;
+        }
+        else {
+            block_device_mode = BF_MODE_RW;
+        }
+    }
+
 
     int irq_num;
     VIRTIOBusDef vbus_s, *vbus = &vbus_s;
-    BlockDevice* bs = block_device_init(fname.c_str(), BF_MODE_RW); //initialization
+    BlockDevice* bs = block_device_init(fname.c_str(), block_device_mode); //initialization
 
     memset(vbus, 0, sizeof(*vbus));
     vbus->addr = VIRTIO_BASE_ADDR;
@@ -1145,7 +1162,6 @@ virtioblk_t::virtioblk_t(
     blk_dev = virtio_block_init(vbus, bs, sim);
     vbus->addr += VIRTIO_SIZE;
 
-  }
 
 }
 
