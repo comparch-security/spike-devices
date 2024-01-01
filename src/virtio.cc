@@ -290,7 +290,6 @@ static void virtio_init(VIRTIODevice *s, VIRTIOBusDef *bus,
         s->sim = sim;
         /* MMIO case */
         s->irq = bus->irq;
-        // TODO: Register virtio_mmio_read, virtio_mmio_write as read/write function.
     }
 
     s->device_id = device_id;
@@ -1069,17 +1068,17 @@ virtioblk_t::virtioblk_t(
 
   auto it = argmap.find("img");
   if (it == argmap.end()) {
-    // dummy block device.
+    // invalid block device.
+    printf("Virtio block device plugin INIT ERROR: `img` argument not specified.\n"
+            "Please use spike option --device=virtioblk,img=file to use an exist block device file.\n");
+    exit(1);
   }
   else {
     std::string fname = it->second;
 
-    VIRTIODevice* blk_dev;
-    int irq_num, i, max_xlen, ram_flags;
+    int irq_num;
     VIRTIOBusDef vbus_s, *vbus = &vbus_s;
     BlockDevice* bs = block_device_init(fname.c_str(), BF_MODE_RW); //initialization
-
-    max_xlen=64;
 
     memset(vbus, 0, sizeof(*vbus));
     vbus->addr = VIRTIO_BASE_ADDR;
