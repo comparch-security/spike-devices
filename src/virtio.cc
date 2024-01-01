@@ -310,14 +310,14 @@ static void virtio_write16(VIRTIODevice *s, virtio_phys_addr_t addr,
                            uint16_t val)
 {
     mmu_t* simdram = s->sim->debug_mmu;
-    simdram->store<uint16_t>(val, addr);
+    simdram->store<uint16_t>(addr, val);
 }
 
 static void virtio_write32(VIRTIODevice *s, virtio_phys_addr_t addr,
                            uint32_t val)
 {
     mmu_t* simdram = s->sim->debug_mmu;
-    simdram->store<uint32_t>(val, addr);
+    simdram->store<uint32_t>(addr, val);
 }
 
 static int memcpy_from_ram_intrapage(VIRTIODevice *s, uint8_t *buf,
