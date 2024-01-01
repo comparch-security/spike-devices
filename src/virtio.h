@@ -125,7 +125,6 @@ public:
   ~virtioblk_t();
   bool load(reg_t addr, size_t len, uint8_t* bytes) override;
   bool store(reg_t addr, size_t len, const uint8_t* bytes) override;
-  void tick(reg_t rtc_ticks) override;
 private:
   const simif_t* sim;
   abstract_interrupt_controller_t *intctrl;

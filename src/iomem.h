@@ -26,6 +26,10 @@
 
 #include "cutils.h"
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 typedef void DeviceWriteFunc(void *opaque, uint32_t offset,
                              uint32_t val, int size_log2);
 typedef uint32_t DeviceReadFunc(void *opaque, uint32_t offset, int size_log2);
@@ -141,5 +145,9 @@ typedef struct {
 } IRQSignal;
 
 void irq_init(IRQSignal *irq, SetIRQFunc *set_irq, void *opaque, int irq_num);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* IOMEM_H */

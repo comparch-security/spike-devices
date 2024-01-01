@@ -26,8 +26,7 @@
 #include <stddef.h>
 #include <inttypes.h>
 
-#define likely(x)       __builtin_expect(!!(x), 1)
-#define unlikely(x)     __builtin_expect(!!(x), 0)
+
 #define force_inline inline __attribute__((always_inline))
 #define no_inline __attribute__((noinline))
 #define __maybe_unused __attribute__((unused))
@@ -56,14 +55,14 @@ enum {
 };
 #endif
 
-/* this test works at least with gcc */
-#if defined(__SIZEOF_INT128__)
-#define HAVE_INT128
-#endif
 
 #ifdef HAVE_INT128
 typedef __int128 int128_t;
 typedef unsigned __int128 uint128_t;
+#endif
+
+#ifdef __cplusplus
+extern "C"{
 #endif
 
 static inline int max_int(int a, int b)
@@ -84,6 +83,10 @@ static inline int min_int(int a, int b)
 
 void *mallocz(size_t size);
 
+#ifdef __cplusplus
+}
+#endif
+
 #if defined(_WIN32)
 static inline uint32_t bswap_32(uint32_t v)
 {
@@ -94,6 +97,9 @@ static inline uint32_t bswap_32(uint32_t v)
 #include <byteswap.h>
 #endif
 
+#ifdef __cplusplus
+extern "C"{
+#endif
 static inline uint16_t get_le16(const uint8_t *ptr)
 {
     return ptr[0] | (ptr[1] << 8);
@@ -190,5 +196,9 @@ void dbuf_write(DynBuf *s, size_t offset, const uint8_t *data, size_t len);
 void dbuf_putc(DynBuf *s, uint8_t c);
 void dbuf_putstr(DynBuf *s, const char *str);
 void dbuf_free(DynBuf *s);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CUTILS_H */
