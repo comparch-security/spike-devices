@@ -17,8 +17,11 @@ default: libvirtioblockdevice.so
 $(UTIL_OBJS: %.o) : %.c %.h
 	gcc $(CFLAGS) -c -o $@ $^
 
-libvirtioblockdevice.so : $(SRC_DIR)/virtio.cc $(SRC_DIR)/virtio.h $(UTIL_OBJS)
-	g++ -L $(RISCV)/lib -Wl,-rpath,$(RISCV)/lib -shared -o $@ -std=c++17 -I $(RISCV)/include -isystem $(RISCV)/include/fdt -fPIC $< $(UTIL_OBJS)
+virtio_base.o : $(SRC_DIR)/virtio.cc $(SRC_DIR)/virtio.h 
+	g++ -L $(RISCV)/lib -c -o $@ -std=c++17 -I $(RISCV)/include -isystem $(RISCV)/include/fdt -fPIC $< 
+
+libvirtioblockdevice.so : $(SRC_DIR)/virtio-block.cc $(SRC_DIR)/virtio-block.h virtio_base.o $(UTIL_OBJS)
+	g++ -L $(RISCV)/lib -Wl,-rpath,$(RISCV)/lib -shared -o $@ -std=c++17 -I $(RISCV)/include -isystem $(RISCV)/include/fdt -fPIC $< virtio_base.o $(UTIL_OBJS)
 
 libspikedevices.so: $(SRCS)
 	g++ -L $(RISCV)/lib -Wl,-rpath,$(RISCV)/lib -shared -o $@ -std=c++17 -I $(RISCV)/include -isystem $(RISCV)/include/fdt -fPIC $^
