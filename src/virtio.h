@@ -35,9 +35,7 @@
 #include <riscv/dts.h>
 #include <fdt/libfdt.h>
 
-#define VIRTIO_BASE_ADDR 0x40010000
 #define VIRTIO_SIZE      0x1000
-#define VIRTIO_IRQ       1
 
 #define VIRTIO_PAGE_SIZE 4096
 
@@ -114,6 +112,11 @@ struct BlockDevice {
 
 BlockDevice *block_device_init(const char *filename, BlockDeviceModeEnum mode);
 VIRTIODevice *virtio_block_init(VIRTIOBusDef *bus, BlockDevice *bs, const simif_t* sim);
+
+struct FSDevice;
+
+VIRTIODevice *virtio_9p_init(VIRTIOBusDef *bus, FSDevice *fs, const char *mount_tag, const simif_t* sim);
+
 
 class virtio_base_t : public abstract_device_t {
 public:

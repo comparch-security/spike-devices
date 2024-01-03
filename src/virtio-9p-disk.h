@@ -9,18 +9,19 @@
 #include <riscv/dts.h>
 #include <fdt/libfdt.h>
 #include "virtio.h"
+#include "fs.h"
+#include "list.h" 
 
-#define VIRTIO_BASE_ADDR 0x40010000
-#define VIRTIO_SIZE      0x1000
-#define VIRTIO_IRQ       1
+#define VIRTIO_9P_FS_BASE 0x40011000
+#define VIRTIO_9P_FS_IRQ       2
 
-class virtioblk_t: public virtio_base_t {
+class virtio9p_t: public virtio_base_t {
 public:
-  virtioblk_t(
+  virtio9p_t(
       const simif_t* sim,
       abstract_interrupt_controller_t *intctrl,
       uint32_t interrupt_id,
       std::vector<std::string> sargs);
-  ~virtioblk_t();
+  ~virtio9p_t();
 private:
 };

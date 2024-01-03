@@ -1,5 +1,6 @@
 libspikedevices.so
 libvirtioblockdevice.so
+libvirtio9pdiskdevice.so
 
 *.o
 *.d
