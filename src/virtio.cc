@@ -412,6 +412,14 @@ static int virtio_memcpy_from_ram(VIRTIODevice *s, uint8_t *buf,
     while (count > 0) {
         l = min_int(count, VIRTIO_PAGE_SIZE - (addr & (VIRTIO_PAGE_SIZE - 1)));
         memcpy_from_ram_intrapage(s, buf, addr, l);
+#ifdef DEBUG_VIRTIO
+        printf("Copying from ram paddr %#lx of length %#x to buf %p :\n",
+            addr, l, buf);
+        for (int i = 0; i < l; i++) {
+            printf("%x ", buf[i]);
+        }
+        putchar('\n');
+#endif 
         addr += l;
         buf += l;
         count -= l;
@@ -457,8 +465,8 @@ static int memcpy_to_from_queue(VIRTIODevice *s, uint8_t *buf,
             buf, count, queue_idx, desc_idx);
     }
     else {
-        printf("Reading from queue qidx = %d, desc_idx = %d, len = %u, to buf %p\n",
-            queue_idx, desc_idx, count, buf);
+        printf("Reading from queue qidx = %d, desc_idx = %d, offset = %u, len = %u, to buf %p\n",
+            queue_idx, desc_idx, offset, count, buf);
     }
 #endif
     if (count == 0)
@@ -483,6 +491,10 @@ static int memcpy_to_from_queue(VIRTIODevice *s, uint8_t *buf,
 
     /* find the descriptor at offset */
     for(;;) {
+#ifdef DEBUG_VIRTIO
+        printf("Searching for desc at offset %u, desc_idx = %d, desc.flags = %#x, desc.len = %u\n",
+            offset, desc_idx, desc.flags, desc.len);
+#endif 
         if ((desc.flags & VRING_DESC_F_WRITE) != f_write_flag)
             return -1;
         if (offset < desc.len)
@@ -493,9 +505,17 @@ static int memcpy_to_from_queue(VIRTIODevice *s, uint8_t *buf,
         offset -= desc.len;
         get_desc(s, &desc, queue_idx, desc_idx);
     }
+#ifdef DEBUG_VIRTIO
+        printf("Desc located at desc_idx %d, offset = %u\n",
+            desc_idx, offset);
+#endif 
 
     for(;;) {
         l = min_int(count, desc.len - offset);
+#ifdef DEBUG_VIRTIO
+        printf("Reading queue of length %d ..., count = %d\n",
+            l, count);
+#endif 
         if (to_queue)
             virtio_memcpy_to_ram(s, desc.addr + offset, buf, l);
         else
@@ -544,20 +564,12 @@ static void virtio_consume_desc(VIRTIODevice *s,
     QueueState *qs = &s->queue[queue_idx];
     virtio_phys_addr_t addr;
     uint32_t index;
-#ifdef DEBUG_VIRTIO
-    printf("Consuming virtio desc qidx = %d, desc_idx = %d, desc_len = %d\n",
-        queue_idx, desc_idx, desc_len);
-#endif
     addr = qs->used_addr + 2;
     index = virtio_read16(s, addr);
     virtio_write16(s, addr, index + 1);
     addr = qs->used_addr + 4 + (index & (qs->num - 1)) * 8;
     virtio_write32(s, addr, desc_idx);
     virtio_write32(s, addr + 4, desc_len);
-#ifdef DEBUG_VIRTIO
-    printf("Consumed virtio desc qidx = %d, desc_idx = %d, desc_len = %d\n",
-        queue_idx, desc_idx, desc_len);
-#endif
     s->int_status |= 1;
     set_irq(s->irq, 1);
 }
@@ -610,6 +622,10 @@ static void queue_notify(VIRTIODevice *s, int queue_idx)
         return;
 
     avail_idx = virtio_read16(s, qs->avail_addr + 2);
+#ifdef DEBUG_VIRTIO
+    printf("avail_idx = %d, qs->last_avail_idx = %d\n",
+        avail_idx, qs->last_avail_idx);
+#endif 
     while (qs->last_avail_idx != avail_idx) {
         desc_idx = virtio_read16(s, qs->avail_addr + 4 + 
                                  (qs->last_avail_idx & (qs->num - 1)) * 2);
@@ -625,10 +641,6 @@ static void queue_notify(VIRTIODevice *s, int queue_idx)
                 break;
         }
         qs->last_avail_idx++;
-#ifdef DEBUG_VIRTIO
-        printf("avail_idx = %d, last_avail_idx = %d.\n",
-            avail_idx, qs->last_avail_idx);
-#endif
     }
 }
 
@@ -1092,7 +1104,7 @@ typedef struct {
 
 struct VIRTIO9PDevice : public VIRTIODevice {
     FSDevice *fs;
-    int msize; /* maximum message size */
+    uint32_t msize; /* maximum message size */
     struct list_head fid_list; /* list of FIDDesc */
     BOOL req_in_progress;
 };
@@ -1548,6 +1560,9 @@ static int virtio_9p_recv_request(VIRTIODevice *s1, int queue_idx,
             if (unmarshall(s, queue_idx, desc_idx, &offset,
                            "ww", &fid, &flags))
                 goto protocol_error;
+#ifdef DEBUG_VIRTIO
+            printf("Virtio 9p fs lopen: fid = %d, flags = %d\n", fid, flags);
+#endif
             f = fid_find(s, fid);
             if (!f)
                 goto fid_not_found;
