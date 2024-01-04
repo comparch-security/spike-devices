@@ -76,6 +76,8 @@
 #define MAX_CONFIG_SPACE_SIZE 256
 #define MAX_QUEUE_NUM 16
 
+#define MAX_9P_MSIZE 0xE000
+
 typedef struct {
     uint32_t ready; /* 0 or 1 */
     uint32_t num;
@@ -1911,6 +1913,8 @@ static int virtio_9p_recv_request(VIRTIODevice *s1, int queue_idx,
             if (unmarshall(s, queue_idx, desc_idx, &offset, 
                            "ws", &msize, &version))
                 goto protocol_error;
+            if (msize > MAX_9P_MSIZE)
+                msize = MAX_9P_MSIZE;
             s->msize = msize;
             //            printf("version: msize=%d version=%s\n", msize, version);
             free(version);
