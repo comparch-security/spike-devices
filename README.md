@@ -6,7 +6,7 @@ Virtio MMIO devices ported from [TinyEMU](https://www.bellard.org/tinyemu/).
 
 Supported virtio MMIO devices:
 - Virtio MMIO block device
-- Virtio 9P filesystem device (local disk filesystem only)
+- Virtio 9P filesystem device (Experimental, local disk filesystem only)
 
 ## Dependencies
 - `riscv-toolchains`
