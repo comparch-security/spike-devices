@@ -54,11 +54,11 @@ virtio9p_t::virtio9p_t(
   std::string fname;
   std::string mount_tag = "/dev/root";
   
-  auto it = argmap.find("file");
+  auto it = argmap.find("path");
   if (it == argmap.end()) {
     // invalid block device.
-    printf("Virtio 9p disk fs device plugin INIT ERROR: `file` argument not specified.\n"
-            "Please use spike option --device=virtio9p,file=path to use an exist host filesystem path.\n");
+    printf("Virtio 9p disk fs device plugin INIT ERROR: `path` argument not specified.\n"
+            "Please use spike option --device=virtio9p,path=/path/to/folder to use an exist host filesystem folder path.\n");
     exit(1);
   }
   else {
@@ -77,7 +77,7 @@ virtio9p_t::virtio9p_t(
   VIRTIOBusDef vbus_s, *vbus = &vbus_s;
   FSDevice* fs = fs_disk_init(fname.c_str());
   if (!fs) {
-    printf("Virtio 9p disk fs device plugin INIT ERROR: `file` %s must be a directory\n", fname.c_str());
+    printf("Virtio 9p disk fs device plugin INIT ERROR: `path` %s must be a directory\n", fname.c_str());
     exit(1);
   }
 

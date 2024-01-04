@@ -115,7 +115,7 @@ soc {
 
 #### Device Parameters
 
-- file=*str* : Path to the host shared folder.
+- path=*str* : Path to the host shared folder.
 - tag=*str* : Optinal. Mount tag the shared folder. Default is "/dev/root".
 
 Guest OS will use mount tag to specify the device to mount.
@@ -128,9 +128,9 @@ Run spike :
 ```bash
 make # Generate libvirtio9pdiskdevice.so
 make install # Optional, shared library will be installed to $(RISCV)/lib
-spike --extlib=/path/to/libvirtio9pdiskdevice.so --device="virtio9p,file=/tmp" bbl
+spike --extlib=/path/to/libvirtio9pdiskdevice.so --device="virtio9p,path=/tmp" bbl
 # We can also set the mount tag 
-spike --extlib=/path/to/libvirtio9pdiskdevice.so --device="virtio9p,file=/tmp,tag=hostshare" bbl
+spike --extlib=/path/to/libvirtio9pdiskdevice.so --device="virtio9p,path=/tmp,tag=hostshare" bbl
 ```
 
 The mount tag can be found inside kernel: (Assume the vitio 9p device is probed as `virtio0`)
@@ -144,8 +144,7 @@ cat /sys/bus/virtio/drivers/9pnet_virtio/virtio0/mount_tag
 
 Inside kernel : (Assume the mount tag is set to `hostshare`)
 ```ash
-# msize should be set in kernel v6.x
-# msize should be a multiple of 4096, and no more than 57344.
+# It's recommended to set msize as a multiple of 4096, and no more than 57344.
 # See bugs below.
 mount -t 9p -o msize=8192 hostshare /mnt 
 # do sth ...
