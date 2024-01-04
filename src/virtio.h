@@ -35,9 +35,7 @@
 #include <riscv/dts.h>
 #include <fdt/libfdt.h>
 
-#define VIRTIO_BASE_ADDR 0x40010000
 #define VIRTIO_SIZE      0x1000
-#define VIRTIO_IRQ       1
 
 #define VIRTIO_PAGE_SIZE 4096
 
@@ -112,16 +110,22 @@ struct BlockDevice {
     BlockDeviceFile *opaque;
 };
 
-VIRTIODevice *virtio_block_init(VIRTIOBusDef *bus, BlockDevice *bs);
+BlockDevice *block_device_init(const char *filename, BlockDeviceModeEnum mode);
+VIRTIODevice *virtio_block_init(VIRTIOBusDef *bus, BlockDevice *bs, const simif_t* sim);
 
-class virtioblk_t : public abstract_device_t {
+struct FSDevice;
+
+VIRTIODevice *virtio_9p_init(VIRTIOBusDef *bus, FSDevice *fs, const char *mount_tag, const simif_t* sim);
+
+
+class virtio_base_t : public abstract_device_t {
 public:
-  virtioblk_t(
+  virtio_base_t(
       const simif_t* sim,
       abstract_interrupt_controller_t *intctrl,
       uint32_t interrupt_id,
       std::vector<std::string> sargs);
-  ~virtioblk_t();
+  ~virtio_base_t();
   bool load(reg_t addr, size_t len, uint8_t* bytes) override;
   bool store(reg_t addr, size_t len, const uint8_t* bytes) override;
 private:
@@ -129,8 +133,8 @@ private:
   abstract_interrupt_controller_t *intctrl;
   uint32_t interrupt_id;
 
-private:
-  VIRTIODevice* blk_dev;
+protected:
+  VIRTIODevice* virtio_dev;
   IRQSpike* irq;
 };
 
