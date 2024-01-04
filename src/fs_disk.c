@@ -240,7 +240,7 @@ static int fs_open(FSDevice *fs, FSQID *qid, FSFile *f, uint32_t flags,
         return -errno_to_p9(errno);
     stat_to_qid(qid, &st);
     
-    if (flags & P9_O_DIRECTORY) {
+    if (S_ISDIR(st.st_mode)) {
         DIR *dirp;
         dirp = opendir(f->path);
         if (!dirp)
