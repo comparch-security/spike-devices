@@ -92,7 +92,7 @@ typedef struct {
 #define VRING_DESC_F_WRITE	2
 #define VRING_DESC_F_INDIRECT	4
 
-// #define OPT_MEMCPY_RAM
+#define OPT_MEMCPY_RAM
 
 typedef struct {
     uint64_t addr;
@@ -332,29 +332,26 @@ static int memcpy_from_ram_intrapage(VIRTIODevice *s, uint8_t *buf,
     int l = 0;
     while (count > 0) {
 #ifdef OPT_MEMCPY_RAM
-        if (addr & 1 || count < 2) {
-            *(buf+l) = simdram->load<uint8_t>(addr);
-            count -= 1;
-            l += 1;
-            addr += 1;
-        }
-        else if (addr & 2 || count < 4) {
-            *(uint16_t*)(buf+l) = simdram->load<uint16_t>(addr);
-            count -= 2;
-            l += 2;
-            addr += 2;
-        }
-        else if (addr & 4 || count < 8) {
-            *(uint32_t*)(buf+l) = simdram->load<uint32_t>(addr);
-            count -= 4;
-            l += 4;
-            addr += 4;
-        }
-        else {// addr is 8byte aligned
-            *(uint64_t*)(buf+l) = simdram->load<uint64_t>(addr);
-            count -= 8;
-            l += 8;
-            addr += 8;
+        if (count >= 8 && addr % 8 == 0) {
+        *(uint64_t*)&buf[l] = simdram->load<uint64_t>(addr);
+        l += 8;
+        count -= 8;
+        addr += 8;
+        } else if (count >= 4 && addr % 4 == 0) {
+        *(uint32_t*)&buf[l] = simdram->load<uint32_t>(addr);
+        l += 4;
+        count -= 4;
+        addr += 4;
+        } else if (count >= 2 && addr % 2 == 0) {
+        *(uint16_t*)&buf[l] = simdram->load<uint16_t>(addr);
+        l += 2;
+        count -= 2;
+        addr += 2;
+        } else {
+        buf[l] = simdram->load<uint8_t>(addr);
+        l++;
+        count--;
+        addr++;
         }
 #else 
         buf[l] = simdram->load<uint8_t>(addr+l);
@@ -372,29 +369,26 @@ static int memcpy_to_ram_intrapage(VIRTIODevice *s, virtio_phys_addr_t addr,
     int l = 0;
     while (count > 0) {
 #ifdef OPT_MEMCPY_RAM
-        if (addr & 1 || count < 2) {
-            simdram->store<uint8_t>(addr, *(uint8_t*)(buf+l));
-            count -= 1;
-            l += 1;
-            addr += 1;
-        }
-        else if (addr & 2 || count < 4) {
-            simdram->store<uint16_t>(addr, *(uint16_t*)(buf+l));
-            count -= 2;
-            l += 2;
-            addr += 2;
-        }
-        else if (addr & 4 || count < 8) {
-            simdram->store<uint32_t>(addr, *(uint32_t*)(buf+l));
-            count -= 4;
-            l += 4;
-            addr += 4;
-        }
-        else {// addr is 8byte aligned
-            simdram->store<uint64_t>(addr, *(uint64_t*)(buf+l));
-            count -= 8;
-            l += 8;
-            addr += 8;
+        if (count >= 8 && addr % 8 == 0) {
+        simdram->store<uint64_t>(addr, *(uint64_t*)&buf[l]);
+        l += 8;
+        count -= 8;
+        addr += 8;
+        } else if (count >= 4 && addr % 4 == 0) {
+        simdram->store<uint32_t>(addr, *(uint32_t*)&buf[l]);
+        l += 4;
+        count -= 4;
+        addr += 4;
+        } else if (count >= 2 && addr % 2 == 0) {
+        simdram->store<uint16_t>(addr, *(uint16_t*)&buf[l]);
+        l += 2;
+        count -= 2;
+        addr += 2;
+        } else {
+        simdram->store<uint8_t>(addr, buf[l]);
+        l++;
+        count--;
+        addr++;
         }
 #else 
         simdram->store<uint8_t>(addr+l, buf[l]);
