@@ -9,10 +9,14 @@ Supported virtio MMIO devices:
 - Virtio 9P filesystem device (Experimental, local disk filesystem only)
 
 ## Dependencies
+
 - `riscv-toolchains`
 - If you are using this within Chipyard, the dependencies will be already installed in the `$RISCV` directory.
 
 ## Quick Start
+
+Make sure `$RISCV` is set before running the following commands.
+
 ```bash
 # iceblk and sifive uart
 make libspikedevices.so
@@ -28,6 +32,12 @@ make all
 ```
 
 ## Usage
+### iceblk and sifive uart
+Example usage:
+
+```bash
+spike --extlib libspikedevices.so --device sifive_uart ./hello.riscv
+```
 ### virtio block device:
 
 ##### Kernel Config Requirements
@@ -206,3 +216,5 @@ Build DTB from modified DTS, say `spike.dtb`:
 # apt install device-tree-compiler
 dtc -O dtb -o spike.dtb /path/to/modified/dts
 ```
+
+
