@@ -97,7 +97,7 @@ virtio9p_t::~virtio9p_t() {
 }
 
 
-std::string virtio9p_generate_dts(const sim_t* sim) {
+std::string virtio9p_generate_dts(const sim_t* sim, const std::vector<std::string>& args) {
   std::stringstream s;
   s << std::hex 
     << "    virtio9p: virtio@" << VIRTIO_9P_FS_BASE << " {\n"
