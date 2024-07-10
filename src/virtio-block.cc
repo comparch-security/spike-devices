@@ -103,7 +103,7 @@ virtioblk_t::~virtioblk_t() {
 }
 
 
-std::string virtioblk_generate_dts(const sim_t* sim) {
+std::string virtioblk_generate_dts(const sim_t* sim, const std::vector<std::string>& args) {
   std::stringstream s;
   s << std::hex 
     << "    virtioblk: virtio@" << VIRTIO_BASE_ADDR << " {\n"
